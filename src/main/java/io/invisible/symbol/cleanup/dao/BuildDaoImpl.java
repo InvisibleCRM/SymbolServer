@@ -2,7 +2,6 @@ package io.invisible.symbol.cleanup.dao;
 
 import io.invisible.symbol.cleanup.Configuration;
 import io.invisible.symbol.cleanup.model.BuildInfo;
-import io.invisible.symbol.cleanup.model.BuildSymbol;
 import io.invisible.symbol.cleanup.util.CommonUtil;
 import io.invisible.symbol.cleanup.util.FileUtil;
 import java.io.BufferedReader;
@@ -13,7 +12,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -84,12 +85,12 @@ public class BuildDaoImpl {
         File buildDescriptor = new File(adminRoot, buildId);
         long result = 0;
 
-        for (BuildSymbol buildSymbol : getBuildSymbols(buildDescriptor)) {
-            File buildSymbolRoot = new File(projectRoot, buildSymbol.getId());
+        for (String symbolPath : getSymbolPaths(buildDescriptor)) {
+            File symbolRoot = new File(projectRoot, symbolPath);
 
-            if (buildSymbolRoot.exists()) {
+            if (symbolRoot.exists()) {
                 try {
-                    result += FileUtil.getFolderSize(buildSymbolRoot);
+                    result += FileUtil.getFolderSize(symbolRoot);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, null, ex);
                 }
@@ -105,6 +106,8 @@ public class BuildDaoImpl {
         File projectDescriptor = new File(adminRoot, "server.txt");
         File resultProjectDescriptor = new File(adminRoot, String.format("server.txt.tmp%d", System.currentTimeMillis()));
 
+        Map<String, String> symbolPathUsageMap = new HashMap<>();
+
         try (BufferedReader projectDescriptorReader = new BufferedReader(new FileReader(projectDescriptor));
                 BufferedWriter resultProjectDescriptorWriter = new BufferedWriter(new FileWriter(resultProjectDescriptor))) {
             while (projectDescriptorReader.ready()) {
@@ -114,6 +117,11 @@ public class BuildDaoImpl {
                 if (!buildIds.contains(buildId)) {
                     resultProjectDescriptorWriter.write(line);
                     resultProjectDescriptorWriter.newLine();
+
+                    File buildDescriptor = new File(adminRoot, buildId);
+                    for (String symbolPath : getSymbolPaths(buildDescriptor)) {
+                        symbolPathUsageMap.put(symbolPath, buildId);
+                    }
                 }
             }
 
@@ -129,13 +137,19 @@ public class BuildDaoImpl {
         for (String buildId : buildIds) {
             File buildDescriptor = new File(adminRoot, buildId);
 
-            for (BuildSymbol buildSymbol : getBuildSymbols(buildDescriptor)) {
-                File buildSymbolRoot = new File(projectRoot, buildSymbol.getId());
+            for (String symbolPath : getSymbolPaths(buildDescriptor)) {
+                File symbolRoot = new File(projectRoot, symbolPath);
 
-                if (buildSymbolRoot.exists()) {
-                    LOGGER.log(Level.INFO, "Deleting {0}", buildSymbolRoot.getAbsolutePath());
+                if (symbolRoot.exists()) {
+                    String usingBuildId = symbolPathUsageMap.get(symbolPath);
+                    if (usingBuildId != null) {
+                        LOGGER.log(Level.INFO, "Skipping {0} as it is referenced in build {1}", CommonUtil.asArray(symbolRoot.getAbsolutePath(), usingBuildId));
+                        continue;
+                    }
+
+                    LOGGER.log(Level.INFO, "Deleting {0}", symbolRoot.getAbsolutePath());
                     try {
-                        FileUtil.deleteFolder(buildSymbolRoot);
+                        FileUtil.deleteFolder(symbolRoot);
                     } catch (IOException ex) {
                         LOGGER.log(Level.SEVERE, null, ex);
                     }
@@ -146,8 +160,8 @@ public class BuildDaoImpl {
         }
     }
 
-    public List<BuildSymbol> getBuildSymbols(File buildDescriptor) {
-        List<BuildSymbol> result = new ArrayList<>();
+    public List<String> getSymbolPaths(File buildDescriptor) {
+        List<String> result = new ArrayList<>();
 
         try (BufferedReader buildDescriptorReader = new BufferedReader(new FileReader(buildDescriptor))) {
             int lineNumber = 0;
@@ -158,15 +172,11 @@ public class BuildDaoImpl {
 
                 String[] parts = line.split(",");
                 if (parts.length != 2) {
-                    LOGGER.log(Level.WARNING, "Unable to read build symbols from file {0} at line {1}", CommonUtil.asArray(buildDescriptor.getAbsolutePath(), lineNumber));
+                    LOGGER.log(Level.WARNING, "Unable to read entry from file {0} at line {1}", CommonUtil.asArray(buildDescriptor.getAbsolutePath(), lineNumber));
                     continue;
                 }
 
-                BuildSymbol buildSymbol = new BuildSymbol();
-                buildSymbol.setId(unquote(parts[0]));
-                buildSymbol.setPath(unquote(parts[1]));
-
-                result.add(buildSymbol);
+                result.add(unquote(parts[0]));
             }
         } catch (FileNotFoundException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
