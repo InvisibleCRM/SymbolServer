@@ -52,8 +52,9 @@ public class ProjectController {
 
     public void defaultAction(HttpServletRequest request) {
         String projectName = request.getParameter("name");
+        boolean calculateSize = request.getParameter("showSize") != null;
 
-        request.setAttribute("builds", buildDao.getBuilds(projectName));
+        request.setAttribute("builds", buildDao.getBuilds(projectName, calculateSize));
     }
 
     public static ProjectController getInstance() {

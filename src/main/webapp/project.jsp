@@ -8,7 +8,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
-        <title>Project info</title>
+        <title>Symbols Manager - ${param.name}</title>
     </head>
     <body>
         <div class="container my-4">
@@ -32,7 +32,16 @@
                                 <th width="10%">Time</th>
                                 <th width="10%">Version</th>
                                 <th>Comment</th>
-                                <th width="10%">Size</th>
+                                <c:choose>
+                                    <c:when test="${not empty param.showSize}">
+                                        <th width="10%">Size</th>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <th width="10%" class="py-0" style="vertical-align: middle;">
+                                            <input class="btn btn-secondary" type="submit" name="showSize" value="Show size"/>
+                                        </th>
+                                    </c:otherwise>
+                                </c:choose>
                             </tr>
                         </thead>
                         <tbody>
@@ -44,8 +53,15 @@
                                     <td>${build.time}</td>
                                     <td>${build.version}</td>
                                     <td>${build.comment}</td>
-                                    <fmt:formatNumber var="sizeMB" value="${build.size / 1048576}" maxFractionDigits="2"/>
-                                    <td>${sizeMB}&nbsp;MB</td>
+                                    <c:choose>
+                                        <c:when test="${not empty build.size}">
+                                            <fmt:formatNumber var="sizeMB" value="${build.size / 1048576}" maxFractionDigits="2"/>
+                                            <td>${sizeMB}&nbsp;MB</td>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <td/>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </tr>
                             </c:forEach>
                         </tbody>

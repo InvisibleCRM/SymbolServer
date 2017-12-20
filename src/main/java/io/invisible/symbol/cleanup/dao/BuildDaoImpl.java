@@ -60,7 +60,7 @@ public class BuildDaoImpl {
         return result;
     }
 
-    public List<BuildInfo> getBuilds(String projectName) {
+    public List<BuildInfo> getBuilds(String projectName, boolean calculateSize) {
         File projectRoot = new File(root, projectName);
         File adminRoot = new File(projectRoot, "000Admin");
         File projectDescriptor = new File(adminRoot, "server.txt");
@@ -79,7 +79,9 @@ public class BuildDaoImpl {
                 buildInfo.setName(unquote(parts[5]));
                 buildInfo.setVersion(unquote(parts[6]));
                 buildInfo.setComment(unquote(parts[7]));
-                buildInfo.setSize(getBuildSize(projectRoot, parts[0]));
+                if (calculateSize) {
+                    buildInfo.setSize(getBuildSize(projectRoot, parts[0]));
+                }
 
                 result.add(buildInfo);
             }
