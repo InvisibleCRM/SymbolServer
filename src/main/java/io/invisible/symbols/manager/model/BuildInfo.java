@@ -1,4 +1,4 @@
-package io.invisible.symbol.cleanup.model;
+package io.invisible.symbols.manager.model;
 
 /**
  *

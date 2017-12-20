@@ -1,4 +1,4 @@
-<%@page import="io.invisible.symbol.cleanup.controller.ProjectController" contentType="text/html" pageEncoding="UTF-8"%>
+<%@page import="io.invisible.symbols.manager.controller.ProjectController" contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <% ProjectController.getInstance().doDispatch(request, response); %>

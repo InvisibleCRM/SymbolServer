@@ -1,4 +1,4 @@
-package io.invisible.symbol.cleanup.util;
+package io.invisible.symbols.manager.util;
 
 /**
  *

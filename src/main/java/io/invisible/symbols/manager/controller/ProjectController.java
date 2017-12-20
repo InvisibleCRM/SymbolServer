@@ -1,6 +1,6 @@
-package io.invisible.symbol.cleanup.controller;
+package io.invisible.symbols.manager.controller;
 
-import io.invisible.symbol.cleanup.dao.BuildDaoImpl;
+import io.invisible.symbols.manager.dao.BuildDaoImpl;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;

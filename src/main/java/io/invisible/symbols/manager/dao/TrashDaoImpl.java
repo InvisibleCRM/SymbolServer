@@ -1,7 +1,7 @@
-package io.invisible.symbol.cleanup.dao;
+package io.invisible.symbols.manager.dao;
 
-import io.invisible.symbol.cleanup.Configuration;
-import io.invisible.symbol.cleanup.util.FileUtil;
+import io.invisible.symbols.manager.Configuration;
+import io.invisible.symbols.manager.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;

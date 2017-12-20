@@ -1,9 +1,9 @@
-package io.invisible.symbol.cleanup.dao;
+package io.invisible.symbols.manager.dao;
 
-import io.invisible.symbol.cleanup.Configuration;
-import io.invisible.symbol.cleanup.model.BuildInfo;
-import io.invisible.symbol.cleanup.util.CommonUtil;
-import io.invisible.symbol.cleanup.util.FileUtil;
+import io.invisible.symbols.manager.Configuration;
+import io.invisible.symbols.manager.model.BuildInfo;
+import io.invisible.symbols.manager.util.CommonUtil;
+import io.invisible.symbols.manager.util.FileUtil;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static io.invisible.symbol.cleanup.util.CommonUtil.asArray;
-import static io.invisible.symbol.cleanup.util.CommonUtil.unquote;
+import static io.invisible.symbols.manager.util.CommonUtil.asArray;
+import static io.invisible.symbols.manager.util.CommonUtil.unquote;
 
 /**
  *

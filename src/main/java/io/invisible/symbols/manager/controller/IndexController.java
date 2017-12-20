@@ -1,8 +1,8 @@
-package io.invisible.symbol.cleanup.controller;
+package io.invisible.symbols.manager.controller;
 
-import io.invisible.symbol.cleanup.Configuration;
-import io.invisible.symbol.cleanup.dao.BuildDaoImpl;
-import io.invisible.symbol.cleanup.dao.TrashDaoImpl;
+import io.invisible.symbols.manager.Configuration;
+import io.invisible.symbols.manager.dao.BuildDaoImpl;
+import io.invisible.symbols.manager.dao.TrashDaoImpl;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
