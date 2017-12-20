@@ -11,6 +11,10 @@ import java.util.Set;
  */
 public class FileUtil {
 
+    private FileUtil() {
+        // hidden constructor
+    }
+
     public static long getFolderSize(File folder) throws IOException {
         return getFolderSize(folder, new HashSet<String>());
     }
@@ -30,30 +34,6 @@ public class FileUtil {
                 }
             }
         }
-
-        return result;
-    }
-
-    public static boolean deleteFolder(File folder) throws IOException {
-        return deleteFolder(folder, new HashSet<String>());
-    }
-
-    private static boolean deleteFolder(File folder, Set<String> history) throws IOException {
-        boolean result = true;
-
-        for (File file : folder.listFiles()) {
-            String canonicalPath = file.getCanonicalPath();
-
-            if (!history.contains(canonicalPath)) {
-                history.add(canonicalPath);
-                if (file.isDirectory()) {
-                    result &= deleteFolder(file, history);
-                } else {
-                    result &= file.delete();
-                }
-            }
-        }
-        folder.delete();
 
         return result;
     }

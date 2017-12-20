@@ -15,13 +15,21 @@ public class ProjectController {
 
     private static ProjectController instance;
 
-    private final BuildDaoImpl buildDao = BuildDaoImpl.getInstance();
+    private final BuildDaoImpl buildDao;
+
+    private ProjectController() {
+        buildDao = BuildDaoImpl.getInstance();
+    }
 
     public void doDispatch(HttpServletRequest request, HttpServletResponse response) {
-        if (request.getParameter("delete") != null) {
-            deleteAction(request);
-        } else {
-            defaultAction(request);
+        try {
+            if (request.getParameter("delete") != null) {
+                deleteAction(request);
+            } else {
+                defaultAction(request);
+            }
+        } catch (RuntimeException ex) {
+            request.setAttribute("error", ex.getMessage());
         }
     }
 

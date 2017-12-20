@@ -7,7 +7,6 @@ import io.invisible.symbol.cleanup.util.FileUtil;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -17,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static io.invisible.symbol.cleanup.util.CommonUtil.asArray;
+import static io.invisible.symbol.cleanup.util.CommonUtil.unquote;
 
 /**
  *
@@ -28,10 +30,20 @@ public class BuildDaoImpl {
 
     private static BuildDaoImpl instance;
 
-    private final File root = new File(Configuration.getRootPath());
+    private final File root;
+    private final TrashDaoImpl trashDao;
+
+    private BuildDaoImpl() {
+        root = new File(Configuration.getRootPath());
+        trashDao = TrashDaoImpl.getInstance();
+    }
 
     public List<String> getProjects() {
         List<String> result = new ArrayList<>();
+
+        if (!root.exists()) {
+            throw new RuntimeException("Incorrect root path");
+        }
 
         for (String fileName : root.list()) {
             File childDirectory = new File(root, fileName);
@@ -71,8 +83,6 @@ public class BuildDaoImpl {
 
                 result.add(buildInfo);
             }
-        } catch (FileNotFoundException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
         }
@@ -104,9 +114,26 @@ public class BuildDaoImpl {
         File projectRoot = new File(root, projectName);
         File adminRoot = new File(projectRoot, "000Admin");
         File projectDescriptor = new File(adminRoot, "server.txt");
-        File resultProjectDescriptor = new File(adminRoot, String.format("server.txt.tmp%d", System.currentTimeMillis()));
+        File projectHistory = new File(adminRoot, "history.txt");
+        File projectLastId = new File(adminRoot, "lastid.txt");
+        Long currentTimeMillis = System.currentTimeMillis();
+        File resultProjectDescriptor = new File(adminRoot, String.format("server.txt.tmp%d", currentTimeMillis));
+        File resultProjectHistory = new File(adminRoot, String.format("history.txt.tmp%d", currentTimeMillis));
+        File resultProjectLastId = new File(adminRoot, String.format("lastid.txt.tmp%d", currentTimeMillis));
 
         Map<String, String> symbolPathUsageMap = new HashMap<>();
+        String lastId;
+
+        try (BufferedReader projectLastIdReader = new BufferedReader(new FileReader(projectLastId))) {
+            if (projectLastIdReader.ready()) {
+                lastId = projectLastIdReader.readLine();
+            } else {
+                throw new RuntimeException("Unable to read last transaction ID");
+            }
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, null, ex);
+            throw new RuntimeException("Unable to read last transaction ID", ex);
+        }
 
         try (BufferedReader projectDescriptorReader = new BufferedReader(new FileReader(projectDescriptor));
                 BufferedWriter resultProjectDescriptorWriter = new BufferedWriter(new FileWriter(resultProjectDescriptor))) {
@@ -124,15 +151,44 @@ public class BuildDaoImpl {
                     }
                 }
             }
-
-        } catch (FileNotFoundException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
+            throw new RuntimeException("Unable to process project descriptor", ex);
+        }
+
+        try (BufferedReader projectHistoryReader = new BufferedReader(new FileReader(projectHistory));
+                BufferedWriter resultProjectHistoryWriter = new BufferedWriter(new FileWriter(resultProjectHistory))) {
+            while (projectHistoryReader.ready()) {
+                resultProjectHistoryWriter.write(projectHistoryReader.readLine());
+                if (projectHistoryReader.ready()) {
+                    resultProjectHistoryWriter.newLine();
+                }
+            }
+
+            for (String buildId : buildIds) {
+                lastId = CommonUtil.increaseId(lastId);
+
+                resultProjectHistoryWriter.newLine();
+                resultProjectHistoryWriter.write(lastId + ",del," + buildId);
+            }
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, null, ex);
+            throw new RuntimeException("Unable to process project history", ex);
+        }
+
+        try (BufferedWriter resultProjectLastIdWriter = new BufferedWriter(new FileWriter(resultProjectLastId))) {
+            resultProjectLastIdWriter.write(lastId);
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, null, ex);
+            throw new RuntimeException("Unable to save last transaction ID", ex);
         }
 
         projectDescriptor.delete();
         resultProjectDescriptor.renameTo(projectDescriptor);
+        projectHistory.delete();
+        resultProjectHistory.renameTo(projectHistory);
+        projectLastId.delete();
+        resultProjectLastId.renameTo(projectLastId);
 
         for (String buildId : buildIds) {
             File buildDescriptor = new File(adminRoot, buildId);
@@ -143,24 +199,21 @@ public class BuildDaoImpl {
                 if (symbolRoot.exists()) {
                     String usingBuildId = symbolPathUsageMap.get(symbolPath);
                     if (usingBuildId != null) {
-                        LOGGER.log(Level.INFO, "Skipping {0} as it is referenced in build {1}", CommonUtil.asArray(symbolRoot.getAbsolutePath(), usingBuildId));
+                        LOGGER.log(Level.INFO, "Skipping {0} as it is referenced in build {1}", asArray(symbolRoot.getAbsolutePath(), usingBuildId));
                         continue;
                     }
 
-                    LOGGER.log(Level.INFO, "Deleting {0}", symbolRoot.getAbsolutePath());
-                    try {
-                        FileUtil.deleteFolder(symbolRoot);
-                    } catch (IOException ex) {
-                        LOGGER.log(Level.SEVERE, null, ex);
-                    }
+                    LOGGER.log(Level.INFO, "Moving {0} to trash", symbolRoot.getAbsolutePath());
+                    trashDao.moveToTrash(symbolRoot);
                 }
             }
 
-            buildDescriptor.delete();
+            File deletedBuildDescriptor = new File(buildDescriptor.getAbsolutePath() + ".deleted");
+            buildDescriptor.renameTo(deletedBuildDescriptor);
         }
     }
 
-    public List<String> getSymbolPaths(File buildDescriptor) {
+    private List<String> getSymbolPaths(File buildDescriptor) {
         List<String> result = new ArrayList<>();
 
         try (BufferedReader buildDescriptorReader = new BufferedReader(new FileReader(buildDescriptor))) {
@@ -172,23 +225,17 @@ public class BuildDaoImpl {
 
                 String[] parts = line.split(",");
                 if (parts.length != 2) {
-                    LOGGER.log(Level.WARNING, "Unable to read entry from file {0} at line {1}", CommonUtil.asArray(buildDescriptor.getAbsolutePath(), lineNumber));
+                    LOGGER.log(Level.WARNING, "Unable to read entry from file {0} at line {1}", asArray(buildDescriptor.getAbsolutePath(), lineNumber));
                     continue;
                 }
 
                 result.add(unquote(parts[0]));
             }
-        } catch (FileNotFoundException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
         }
 
         return result;
-    }
-
-    private static String unquote(String value) {
-        return value.substring(1, value.length() - 1);
     }
 
     public static BuildDaoImpl getInstance() {
