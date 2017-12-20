@@ -7,7 +7,7 @@ package io.invisible.symbol.cleanup;
 public class Configuration {
 
     public static String getRootPath() {
-        return "D:";
+        return "C:\\storage";
     }
 
     public static long getTrashQuota() {
