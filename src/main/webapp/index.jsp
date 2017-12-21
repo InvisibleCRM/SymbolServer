@@ -35,11 +35,11 @@
             </c:choose>
             <div class="progress" style="height: 20px;">
                 <div class="progress-bar ${progressClass}" style="width: ${progress}%;">
-                    <c:if test="${progress >= 5}">
+                    <c:if test="${progress >= 10}">
                         <span>${trashSizeMB}&nbsp;MB</span>
                     </c:if>
                 </div>
-                <c:if test="${progress < 5}">
+                <c:if test="${progress < 10}">
                     <span class="pl-1" style="margin-top: 1px; margin-bottom: 1px;">${trashSizeMB} MB</span>
                 </c:if>
             </div>

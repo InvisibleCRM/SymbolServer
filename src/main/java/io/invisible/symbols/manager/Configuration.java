@@ -11,6 +11,6 @@ public class Configuration {
     }
 
     public static long getTrashQuota() {
-        return 1001073741824L;
+        return 101073741824L;
     }
 }
