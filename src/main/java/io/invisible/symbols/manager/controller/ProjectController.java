@@ -34,18 +34,20 @@ public class ProjectController {
     }
 
     public void deleteAction(HttpServletRequest request) {
-        String projectName = request.getParameter("name");
-        List<String> idsToDelete = new ArrayList<>();
+        if (Boolean.TRUE.equals(request.getAttribute("isManager"))) {
+            String projectName = request.getParameter("name");
+            List<String> idsToDelete = new ArrayList<>();
 
-        Enumeration<String> parameterNames = request.getParameterNames();
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            if (parameterName.startsWith("build_")) {
-                idsToDelete.add(request.getParameter(parameterName));
+            Enumeration<String> parameterNames = request.getParameterNames();
+            while (parameterNames.hasMoreElements()) {
+                String parameterName = parameterNames.nextElement();
+                if (parameterName.startsWith("build_")) {
+                    idsToDelete.add(request.getParameter(parameterName));
+                }
             }
-        }
 
-        buildDao.deleteBuilds(projectName, idsToDelete);
+            buildDao.deleteBuilds(projectName, idsToDelete);
+        }
 
         defaultAction(request);
     }
